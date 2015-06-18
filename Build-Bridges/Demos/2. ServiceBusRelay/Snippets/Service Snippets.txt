@@ -1,0 +1,36 @@
+---------------------------------
+Create Locally Hosted WCF Service
+---------------------------------
+var host = new ServiceHost(typeof (Service));
+var endpointAddress = CloudConfigurationManager.GetSetting("ServiceEndpoint");
+host.AddServiceEndpoint(typeof (IWho), new NetTcpBinding(), endpointAddress);
+host.Open();
+
+-------------------------------------------
+Create a WCF Service with Service Bus Relay
+-------------------------------------------
+var host = new ServiceHost(typeof(ServiceWithRelay));
+var endpointAddress = CloudConfigurationManager.GetSetting("ServiceEndpoint");
+var endpoint = host.AddServiceEndpoint(typeof(IWho), new NetTcpRelayBinding(), endpointAddress);
+
+var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider("RootManageSharedAccessKey",
+    CloudConfigurationManager.GetSetting("SharedAccessKey"));
+endpoint.Behaviors.Add(new TransportClientEndpointBehavior(tokenProvider));
+endpoint.Behaviors.Add(new ServiceRegistrySettings(DiscoveryType.Public));
+
+host.Open();
+
+------------------------------------------------
+Create a REST WCF Service with Service Bus Relay
+------------------------------------------------
+var restHost = new ServiceHost(typeof(ServiceWithRelay));
+var restEndpointAddress = CloudConfigurationManager.GetSetting("RestServiceEndpoint");
+var restEndpoint = restHost.AddServiceEndpoint(typeof(IWho), new WebHttpRelayBinding(), restEndpointAddress);
+
+var restTokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider("RootManageSharedAccessKey",
+    CloudConfigurationManager.GetSetting("SharedAccessKey"));
+restEndpoint.Behaviors.Add(new TransportClientEndpointBehavior(restTokenProvider));
+restEndpoint.Behaviors.Add(new ServiceRegistrySettings(DiscoveryType.Public));
+restEndpoint.Behaviors.Add(new WebHttpBehavior());
+
+restHost.Open();

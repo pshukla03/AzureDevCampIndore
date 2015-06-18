@@ -1,0 +1,57 @@
+------------
+Create Queue
+------------
+var namespaceManager = NamespaceManager.CreateFromConnectionString(
+    CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString"));
+
+const string queueName = "TestQueue";
+var queueDescription = new QueueDescription(queueName)
+{
+    MaxSizeInMegabytes = 5120,
+    DefaultMessageTimeToLive = new TimeSpan(0, 1, 0)
+};
+
+if (!namespaceManager.QueueExists(queueName))
+{
+    namespaceManager.CreateQueue(queueDescription);
+}
+
+
+---------------------
+Send message to Queue
+---------------------
+var client =
+    QueueClient.CreateFromConnectionString(
+        CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString"), queueName);
+
+var message = new BrokeredMessage("Test Message");
+message.Properties["PartnerName"] = "Microsoft";
+
+client.Send(message);
+
+
+-----------------------
+Read message from Queue
+-----------------------
+var options = new OnMessageOptions
+{
+    AutoComplete = false,
+    AutoRenewTimeout = TimeSpan.FromMinutes(1)
+};
+
+client.OnMessage(queuedMessage =>
+{
+    try
+    {
+        Console.WriteLine("Message Id:" + queuedMessage.MessageId);
+        Console.WriteLine("Message Body:" + queuedMessage.GetBody<string>());
+        Console.WriteLine("Partner Name:" + queuedMessage.Properties["PartnerName"]);
+
+        queuedMessage.Complete();
+    }
+    catch (Exception)
+    {
+        queuedMessage.Abandon();
+    }
+
+}, options);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            

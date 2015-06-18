@@ -1,0 +1,35 @@
+-------------------------------------------------------
+Create a client to consume a locally hosted WCF Service
+-------------------------------------------------------
+var localEndpointAddress = CloudConfigurationManager.GetSetting("LocalEndpointAddress");
+var localFactory = new ChannelFactory<IWho>(new NetTcpBinding(), localEndpointAddress);
+var localChannel = localFactory.CreateChannel();
+Console.WriteLine("Connecting to service hosted at {0}", localEndpointAddress);
+
+Console.WriteLine(localChannel.Who());
+
+-----------------------------------------------
+Consume a WCF service through Service Bus Relay
+-----------------------------------------------
+var serviceBusEndpointAddress = CloudConfigurationManager.GetSetting("RelayEndpointAddress");
+var serviceBusFactory = new ChannelFactory<IWho>(new NetTcpRelayBinding(), serviceBusEndpointAddress);
+var tokenProvider = TokenProvider.CreateSharedAccessSignatureTokenProvider("RootManageSharedAccessKey",
+    CloudConfigurationManager.GetSetting("SharedAccessKey"));
+serviceBusFactory.Endpoint.Behaviors.Add(new TransportClientEndpointBehavior(tokenProvider));
+var serviceBusChannel = serviceBusFactory.CreateChannel();
+Console.WriteLine("Connecting to service hosted at {0}", serviceBusEndpointAddress);
+
+Console.WriteLine(serviceBusChannel.Who());
+
+
+----------------------------------------------------
+Consume a REST WCF service through Service Bus Relay
+----------------------------------------------------
+var restServiceBusEndpointAddress = CloudConfigurationManager.GetSetting("RestRelayEndpointAddress");
+var restServiceBusFactory = new ChannelFactory<IWho>(new WebHttpRelayBinding(), restServiceBusEndpointAddress);
+restServiceBusFactory.Endpoint.Behaviors.Add(new TransportClientEndpointBehavior(tokenProvider));
+restServiceBusFactory.Endpoint.Behaviors.Add(new WebHttpBehavior());
+var restServiceBusChannel = restServiceBusFactory.CreateChannel();
+Console.WriteLine("Connecting to service hosted at {0}", restServiceBusEndpointAddress);
+
+Console.WriteLine(restServiceBusChannel.Who());

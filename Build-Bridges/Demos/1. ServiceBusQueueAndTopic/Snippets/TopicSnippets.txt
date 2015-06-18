@@ -1,0 +1,93 @@
+------------
+Create Topic
+------------
+var namespaceManager = NamespaceManager.CreateFromConnectionString(
+    CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString"));
+
+const string topicName = "TestTopic";
+var topicDescription = new TopicDescription(topicName)
+{
+    MaxSizeInMegabytes = 5120,
+    DefaultMessageTimeToLive = new TimeSpan(0, 1, 0)
+};
+
+if (!namespaceManager.TopicExists(topicName))
+{
+    namespaceManager.CreateTopic(topicDescription);
+}
+
+--------------------
+Create Subscriptions
+--------------------
+const string allMessagesSubscription = "AllMessages";
+if (!namespaceManager.SubscriptionExists(topicName, allMessagesSubscription))
+{
+    namespaceManager.CreateSubscription(topicName, allMessagesSubscription);
+}
+
+const string highMessagesSubscription = "HighMessages";
+if (!namespaceManager.SubscriptionExists(topicName, highMessagesSubscription))
+{
+    var highMessagesFilter = new SqlFilter("MessageNumber > 3");
+    namespaceManager.CreateSubscription(topicName, highMessagesSubscription, highMessagesFilter);
+}
+
+const string lowMessagesSubscription = "LowMessages";
+if (!namespaceManager.SubscriptionExists(topicName, lowMessagesSubscription))
+{
+    var lowMessagesFilter = new SqlFilter("MessageNumber <= 3");
+    namespaceManager.CreateSubscription(topicName, lowMessagesSubscription, lowMessagesFilter);
+
+}
+
+
+----------------------
+Send messages to Topic
+----------------------
+var client = TopicClient.CreateFromConnectionString(
+        CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString"), topicName);
+
+for (var i = 0; i < 5; i++)
+{
+    var topicMessage =
+    new BrokeredMessage("Test message " + i);
+    topicMessage.Properties["MessageNumber"] = i;
+    client.Send(topicMessage);
+
+}
+
+------------------------
+Read messages from Topic
+------------------------
+var subscriptionClientAll = SubscriptionClient.CreateFromConnectionString(
+    CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString"), topicName,
+    allMessagesSubscription);
+
+var subscriptionClientHigh = SubscriptionClient.CreateFromConnectionString(
+    CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString"), topicName,
+    highMessagesSubscription);
+
+var subscriptionClientLow = SubscriptionClient.CreateFromConnectionString(
+    CloudConfigurationManager.GetSetting("Microsoft.ServiceBus.ConnectionString"), topicName,
+    lowMessagesSubscription);
+
+var options = new OnMessageOptions
+{
+    AutoComplete = false,
+    AutoRenewTimeout = TimeSpan.FromMinutes(1)
+};
+
+subscriptionClientAll.OnMessage(message =>
+{
+    ProcessTopicMessage(message, allMessagesSubscription);
+}, options);
+
+subscriptionClientHigh.OnMessage(message =>
+{
+    ProcessTopicMessage(message, highMessagesSubscription);
+}, options);
+
+subscriptionClientLow.OnMessage(message =>
+{
+    ProcessTopicMessage(message, lowMessagesSubscription);
+}, options);
